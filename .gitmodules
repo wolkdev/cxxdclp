@@ -1,0 +1,3 @@
+[submodule "externs/tokenizer"]
+	path = externs/tokenizer
+	url = https://github.com/wolkdev/tokenizer.git
