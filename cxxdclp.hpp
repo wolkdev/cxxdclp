@@ -26,6 +26,50 @@ char* file_read_all_text(const char* _filePath)
     return nullptr;
 }
 
+void skip_until(tokenizer& _tok, const std::string& _str)
+{
+    while (!_tok.finished() && _tok.next() != _str) { }
+}
+
+size_t find_token_pos(
+    const std::vector<std::string>& _tokens,
+    const std::string& _token, size_t _start = 0)
+{
+    for (size_t i = _start; i < _tokens.size(); i++)
+    {
+        if (_tokens[i] == _token)
+        {
+            return _start;
+        }
+    }
+    
+    return std::string::npos;
+}
+
+void parse_line(const std::vector<std::string>& _tokens)
+{
+    size_t size = _tokens.size();
+
+    size_t equals = find_token_pos(_tokens, "=");
+    size_t bracket = find_token_pos(_tokens, "(");
+
+    if (equals != std::string::npos)
+    {
+        // pure function
+        if (bracket != std::string::npos
+            && bracket < equals
+            && _tokens[equals + 1] == "0")
+        {
+
+        }
+        // variable
+        else
+        {
+
+        }
+    }
+}
+
 void parse(const char* _filePath)
 {
     char* content = file_read_all_text(_filePath);
@@ -109,9 +153,23 @@ void parse(const char* _filePath)
         
         tok.start(content);
 
+        std::vector<std::string> lineTokens;
+
         while (!tok.finished())
         {
             const std::string& token = tok.next();
+
+            if (token == ";" || token == "{")
+            {
+                if (token == "{")
+                {
+                    skip_until(tok, "}");
+                }
+            }
+            else
+            {
+                lineTokens.push_back(token);
+            }
 
             std::cout << token << "\n";
         }
