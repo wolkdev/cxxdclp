@@ -2,178 +2,168 @@
 #define CXXDCLP__HPP
 
 #include "externs/tokenizer/tokenizer.hpp"
+#include "tools.hpp"
 
 #include <cstdio>
 #include <iostream>
+#include <vector>
+#include <string>
 
-char* file_read_all_text(const char* _filePath)
+class cxxdclp
 {
-    FILE* file = fopen(_filePath, "r");
-
-    if (file != nullptr)
-    {
-        fseek(file, 0, SEEK_END);
-
-        size_t size = ftell(file);
-        char* content = new char[size];
-
-        rewind(file);
-        fread(content, sizeof(char), size, file);
-
-        return content;
-    }
-
-    return nullptr;
-}
-
-void skip_until(tokenizer& _tok, const std::string& _str)
-{
-    while (!_tok.finished() && _tok.next() != _str) { }
-}
-
-size_t find_token_pos(
-    const std::vector<std::string>& _tokens,
-    const std::string& _token, size_t _start = 0)
-{
-    for (size_t i = _start; i < _tokens.size(); i++)
-    {
-        if (_tokens[i] == _token)
-        {
-            return _start;
-        }
-    }
+    private:
+    static tokenizer stokenizer;
     
-    return std::string::npos;
-}
+    private:
+    std::vector<std::string> context;
 
-void parse_line(const std::vector<std::string>& _tokens)
-{
-    size_t size = _tokens.size();
-
-    size_t equals = find_token_pos(_tokens, "=");
-    size_t bracket = find_token_pos(_tokens, "(");
-
-    if (equals != std::string::npos)
+    private:
+    void parse_instruction(const std::vector<std::string>& _tokens)
     {
-        // pure function
-        if (bracket != std::string::npos
-            && bracket < equals
-            && _tokens[equals + 1] == "0")
+        size_t size = _tokens.size();
+
+        size_t equals = find_token_pos(_tokens, "=");
+        size_t bracket = find_token_pos(_tokens, "(");
+
+        if (equals != std::string::npos)
         {
-
-        }
-        // variable
-        else
-        {
-
-        }
-    }
-}
-
-void parse(const char* _filePath)
-{
-    char* content = file_read_all_text(_filePath);
-
-    if (content != nullptr)
-    {
-        tokenizer tok;
-
-        tok.set_dropped_delimiters(" \t\r\n");
-
-        tok.add_kept_delimiter("template");
-        tok.add_kept_delimiter("struct");
-        tok.add_kept_delimiter("class");
-        tok.add_kept_delimiter("enum");
-        tok.add_kept_delimiter("typedef");
-        tok.add_kept_delimiter("typename");
-
-        tok.add_kept_delimiter("mutable");
-        tok.add_kept_delimiter("default");
-
-        tok.add_kept_delimiter("const");
-        tok.add_kept_delimiter("if");
-        tok.add_kept_delimiter("else");
-        tok.add_kept_delimiter("for");
-        tok.add_kept_delimiter("while");
-        tok.add_kept_delimiter("do");
-        tok.add_kept_delimiter("public");
-        tok.add_kept_delimiter("protected");
-        tok.add_kept_delimiter("private");
-        tok.add_kept_delimiter("nullptr");
-        tok.add_kept_delimiter("auto");
-        tok.add_kept_delimiter("new");
-        tok.add_kept_delimiter("delete");
-        tok.add_kept_delimiter("static");
-        tok.add_kept_delimiter("virtual");
-        tok.add_kept_delimiter("override");
-
-        tok.add_kept_delimiter("include");
-        tok.add_kept_delimiter("define");
-        tok.add_kept_delimiter("ifndef");
-        tok.add_kept_delimiter("ifdef");
-        tok.add_kept_delimiter("endif");
-        tok.add_kept_delimiter("elif");
-        tok.add_kept_delimiter("undef");
-
-        tok.add_kept_delimiter("unsigned");
-        tok.add_kept_delimiter("void");
-        tok.add_kept_delimiter("int");
-        tok.add_kept_delimiter("float");
-        tok.add_kept_delimiter("double");
-        tok.add_kept_delimiter("char");
-
-        tok.add_kept_delimiter(";");
-        tok.add_kept_delimiter("{");
-        tok.add_kept_delimiter("}");
-
-        tok.add_kept_delimiter("::");
-        tok.add_kept_delimiter("&&");
-        tok.add_kept_delimiter("->");
-        tok.add_kept_delimiter("//");
-        tok.add_kept_delimiter("/*");
-        tok.add_kept_delimiter("*/");
-        tok.add_kept_delimiter("(");
-        tok.add_kept_delimiter(")");
-        tok.add_kept_delimiter(",");
-        tok.add_kept_delimiter(":");
-        tok.add_kept_delimiter("&");
-        tok.add_kept_delimiter("*");
-        tok.add_kept_delimiter("=");
-        tok.add_kept_delimiter("+");
-        tok.add_kept_delimiter("-");
-        tok.add_kept_delimiter("/");
-        tok.add_kept_delimiter("<");
-        tok.add_kept_delimiter(">");
-        tok.add_kept_delimiter("\"");
-        tok.add_kept_delimiter("'");
-        tok.add_kept_delimiter(".");
-        tok.add_kept_delimiter("[");
-        tok.add_kept_delimiter("]");
-        tok.add_kept_delimiter("#");
-        
-        tok.start(content);
-
-        std::vector<std::string> lineTokens;
-
-        while (!tok.finished())
-        {
-            const std::string& token = tok.next();
-
-            if (token == ";" || token == "{")
+            // pure function
+            if (bracket != std::string::npos
+                && bracket < equals
+                && _tokens[equals + 1] == "0")
             {
-                if (token == "{")
-                {
-                    skip_until(tok, "}");
-                }
+
             }
+            // variable
             else
             {
-                lineTokens.push_back(token);
-            }
+                const std::string& name = _tokens[equals - 1];
+                std::vector<std::string> type;
 
-            std::cout << token << "\n";
+                for (size_t i = 0; i < equals - 1; i++)
+                {
+                    type.push_back(_tokens[i]);
+                }
+            }
         }
     }
-}
+
+    void parse_file(const char* _filePath)
+    {
+        char* content = file_read_all_text(_filePath);
+
+        if (content != nullptr)
+        {
+            stokenizer.start(content);
+
+            std::vector<std::string> lineTokens;
+
+            while (!stokenizer.finished())
+            {
+                const std::string& token = stokenizer.next();
+
+                if (token == ";" || token == "{")
+                {
+                    if (token == "{")
+                    {
+                        skip_until(stokenizer, "}");
+                    }
+                }
+                else
+                {
+                    lineTokens.push_back(token);
+                }
+
+                std::cout << token << "\n";
+            }
+        }
+    }
+
+    public:
+    static void parse(const char* _startupPath)
+    {
+        cxxdclp parser;
+        parser.parse_file(_startupPath);
+    }
+};
+
+tokenizer cxxdclp::stokenizer = tokenizer
+(
+    " \t\r\n",                  // Dropped Delimiters
+
+    std::vector<std::string>    // Kept Delimiters
+    {
+        "template",
+        "struct",
+        "class",
+        "enum",
+        "typedef",
+        "typename",
+
+        "mutable",
+        "default",
+
+        "const",
+        "if",
+        "else",
+        "for",
+        "while",
+        "do",
+        "public",
+        "protected",
+        "private",
+        "nullptr",
+        "auto",
+        "new",
+        "delete",
+        "static",
+        "virtual",
+        "override",
+
+        "include",
+        "define",
+        "ifndef",
+        "ifdef",
+        "endif",
+        "elif",
+        "undef",
+
+        "unsigned",
+        "void",
+        "int",
+        "float",
+        "double",
+        "char",
+
+        ";",
+        "{",
+        "}",
+
+        "::",
+        "&&",
+        "->",
+        "//",
+        "/*",
+        "*/",
+        "(",
+        ")",
+        ",",
+        ":",
+        "&",
+        "*",
+        "=",
+        "+",
+        "-",
+        "/",
+        "<",
+        ">",
+        "\"",
+        "'",
+        ".",
+        "[",
+        "]",
+        "#",
+    }
+);
 
 #endif // !CXXDCLP__HPP
