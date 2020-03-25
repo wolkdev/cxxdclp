@@ -17,6 +17,9 @@ class cxxdclp
     private:
     std::vector<std::string> context;
 
+    std::vector<std::string> instruction;
+    bool preprocessor = false;
+
     private:
     void parse_instruction(const std::vector<std::string>& _tokens)
     {
@@ -48,6 +51,23 @@ class cxxdclp
         }
     }
 
+    void parse_preprocessor_instruction(const std::vector<std::string>& _tokens)
+    {
+        if (_tokens[0] == "include")
+        {
+
+        }
+        else if (_tokens[0] == "define")
+        {
+
+        }
+        else if (_tokens[0] == "if")
+        {
+
+        }
+        // ...
+    }
+
     void parse_file(const char* _filePath)
     {
         char* content = file_read_all_text(_filePath);
@@ -56,22 +76,42 @@ class cxxdclp
         {
             stokenizer.start(content);
 
-            std::vector<std::string> lineTokens;
-
             while (!stokenizer.finished())
             {
                 const std::string& token = stokenizer.next();
 
-                if (token == ";" || token == "{")
+                if (preprocessor)
                 {
-                    if (token == "{")
+                    if (token == "\n") // TODO : keep end line char ?
                     {
-                        skip_until(stokenizer, "}");
+                        parse_preprocessor_instruction(instruction);
+                        instruction.clear();
+                    }
+                    else
+                    {
+                        instruction.push_back(token);
                     }
                 }
                 else
                 {
-                    lineTokens.push_back(token);
+                    if (token == "#")
+                    {
+                        preprocessor = true;
+                    }
+                    else if (token == ";" || token == "{")
+                    {
+                        if (token == "{")
+                        {
+                            skip_until(stokenizer, "}");
+                        }
+
+                        parse_instruction(instruction);
+                        instruction.clear();
+                    }
+                    else
+                    {
+                        instruction.push_back(token);
+                    }
                 }
 
                 std::cout << token << "\n";
