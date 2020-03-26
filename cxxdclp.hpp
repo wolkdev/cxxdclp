@@ -17,36 +17,71 @@ class cxxdclp
     private:
     std::vector<std::string> context;
 
+    std::vector<std::string> defines;
+
     std::vector<std::string> instruction;
     bool preprocessor = false;
 
     private:
+    void parse_variable(const std::vector<std::string>& _tokens)
+    {
+        size_t equals = find_token_pos(_tokens, "=");
+        const std::string& name = _tokens[equals - 1];
+        std::vector<std::string> type;
+
+        for (size_t i = 0; i < equals - 1; i++)
+        {
+            type.push_back(_tokens[i]);
+        }
+    }
+
+    void parse_function(const std::vector<std::string>& _tokens)
+    {
+
+    }
+
     void parse_instruction(const std::vector<std::string>& _tokens)
     {
         size_t size = _tokens.size();
 
-        size_t equals = find_token_pos(_tokens, "=");
-        size_t bracket = find_token_pos(_tokens, "(");
-
-        if (equals != std::string::npos)
+        if (size == 0)
         {
-            // pure function
-            if (bracket != std::string::npos
-                && bracket < equals
-                && _tokens[equals + 1] == "0")
-            {
+            return;
+        }
+        else if (_tokens[0] == "class")
+        {
 
-            }
-            // variable
-            else
-            {
-                const std::string& name = _tokens[equals - 1];
-                std::vector<std::string> type;
+        }
+        else if (_tokens[0] == "struct")
+        {
 
-                for (size_t i = 0; i < equals - 1; i++)
+        }
+        else if (_tokens[0] == "namespace")
+        {
+
+        }
+        else
+        {
+            size_t equals = find_token_pos(_tokens, "=");
+            size_t bracket = find_token_pos(_tokens, "(");
+
+            if (equals != std::string::npos)
+            {
+                // pure function
+                if (bracket != std::string::npos && bracket < equals)
                 {
-                    type.push_back(_tokens[i]);
+                    parse_function(_tokens);
                 }
+                // variable
+                else
+                {
+                    parse_variable(_tokens);
+                }
+            }
+            // function
+            else if (bracket != std::string::npos)
+            {
+                parse_function(_tokens);
             }
         }
     }
@@ -79,6 +114,11 @@ class cxxdclp
             while (!stokenizer.finished())
             {
                 const std::string& token = stokenizer.next();
+
+                if (token == "\"")
+                {
+                    // TODO : Get 'raw' string
+                }
 
                 if (preprocessor)
                 {

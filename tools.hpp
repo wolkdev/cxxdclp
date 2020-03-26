@@ -28,9 +28,9 @@ char* file_read_all_text(const char* _filePath)
     return nullptr;
 }
 
-void skip_until(tokenizer& _tok, const std::string& _str)
+void skip_until(tokenizer& _tokenizer, const std::string& _str)
 {
-    while (!_tok.finished() && _tok.next() != _str) { }
+    while (!_tokenizer.finished() && _tokenizer.next() != _str) { }
 }
 
 size_t find_token_pos(
