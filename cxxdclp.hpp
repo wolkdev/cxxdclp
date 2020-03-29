@@ -25,19 +25,34 @@ class cxxdclp
     private:
     void parse_variable(const std::vector<std::string>& _tokens)
     {
-        size_t equals = find_token_pos(_tokens, "=");
-        const std::string& name = _tokens[equals - 1];
+        std::string name;
         std::vector<std::string> type;
+        std::vector<std::string> value;
 
-        for (size_t i = 0; i < equals - 1; i++)
+        for (size_t i = 0; i < _tokens.size() - 1; i++)
         {
-            type.push_back(_tokens[i]);
+            if (!name.empty())
+            {
+                value.push_back(_tokens[i]);
+            }
+            else
+            {
+                if (_tokens[i + 1] == "=" || _tokens[i + 1] == ";")
+                {
+                    name = _tokens[i];
+                    i++; // skip "=" or ";"
+                }
+                else
+                {
+                    type.push_back(_tokens[i]);
+                }
+            }
         }
     }
 
     void parse_function(const std::vector<std::string>& _tokens)
     {
-
+        
     }
 
     void parse_instruction(const std::vector<std::string>& _tokens)
@@ -82,6 +97,11 @@ class cxxdclp
             else if (bracket != std::string::npos)
             {
                 parse_function(_tokens);
+            }
+            // variable
+            else
+            {
+                parse_variable(_tokens);
             }
         }
     }
@@ -145,6 +165,7 @@ class cxxdclp
                             skip_until(stokenizer, "}");
                         }
 
+                        instruction.push_back(token);
                         parse_instruction(instruction);
                         instruction.clear();
                     }
@@ -173,58 +194,15 @@ tokenizer cxxdclp::stokenizer = tokenizer
 
     std::vector<std::string>    // Kept Delimiters
     {
-        "template",
-        "struct",
-        "class",
-        "enum",
-        "typedef",
-        "typename",
-
-        "mutable",
-        "default",
-
-        "const",
-        "if",
-        "else",
-        "for",
-        "while",
-        "do",
-        "public",
-        "protected",
-        "private",
-        "nullptr",
-        "auto",
-        "new",
-        "delete",
-        "static",
-        "virtual",
-        "override",
-
-        "include",
-        "define",
-        "ifndef",
-        "ifdef",
-        "endif",
-        "elif",
-        "undef",
-
-        "unsigned",
-        "void",
-        "int",
-        "float",
-        "double",
-        "char",
-
-        ";",
-        "{",
-        "}",
-
         "::",
         "&&",
         "->",
         "//",
         "/*",
         "*/",
+        ";",
+        "{",
+        "}",
         "(",
         ")",
         ",",
