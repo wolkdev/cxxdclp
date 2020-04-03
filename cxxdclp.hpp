@@ -2,7 +2,10 @@
 #define CXXDCLP__HPP
 
 #include "externs/tokenizer/tokenizer.hpp"
+
 #include "tools.hpp"
+
+#include "data.hpp"
 
 #include <cstdio>
 #include <iostream>
@@ -22,101 +25,165 @@ class cxxdclp
     std::vector<std::string> instruction;
     bool preprocessor = false;
 
-    private:
-    void parse_variable(const std::vector<std::string>& _tokens)
-    {
-        std::string name;
-        std::vector<std::string> type;
-        std::vector<std::string> value;
+    std::vector<type> types;
+    std::vector<variable> variables;
+    std::vector<function> functions;
 
-        for (size_t i = 0; i < _tokens.size() - 1; i++)
+    private:
+    variable parse_variable(size_t _start, size_t _end)
+    {
+        variable var;
+
+        for (size_t i = _start; i <= _end; i++)
         {
-            if (!name.empty())
+            if (!var.name.empty())
             {
-                value.push_back(_tokens[i]);
+                var.value.push_back(instruction[i]);
             }
             else
             {
-                if (_tokens[i + 1] == "=" || _tokens[i + 1] == ";")
+                const std::string& next = instruction[i + 1];
+
+                if (next == "=" || next == ";" || next == "," || next == ")")
                 {
-                    name = _tokens[i];
-                    i++; // skip "=" or ";"
+                    var.name = instruction[i];
+                    i++; // skip "=" or ";" or "," or ")"
                 }
                 else
                 {
-                    type.push_back(_tokens[i]);
+                    var.type.push_back(instruction[i]);
                 }
             }
         }
+
+        return var;
     }
 
-    void parse_function(const std::vector<std::string>& _tokens)
+    function parse_function(size_t _start, size_t _end)
     {
-        
+        function func;
+
+        size_t arg = 0;
+
+        for (size_t i = _start; i < _end - 1; i++)
+        {
+            if (!func.name.empty())
+            {
+                if (instruction[i] == "," || instruction[i] == ")" && arg < i)
+                {
+                    func.args.push_back(parse_variable(arg, i));
+                    arg = i + 1;
+                }
+            }
+            else
+            {
+                const std::string& next = instruction[i + 1];
+
+                if (next == "(")
+                {
+                    func.name = instruction[i];
+                    i++; // skip "("
+                    arg = i + 1;
+                }
+                else
+                {
+                    func.type.push_back(instruction[i]);
+                }
+            }
+        }
+
+        return func;
     }
 
-    void parse_instruction(const std::vector<std::string>& _tokens)
+    INSTRUCTION_TYPE get_instruction_type()
     {
-        size_t size = _tokens.size();
+        size_t size = instruction.size();
 
         if (size == 0)
         {
-            return;
+            return INSTRUCTION_TYPE::UNKNOWN;
         }
-        else if (_tokens[0] == "class")
+        else if (instruction[0] == "namespace")
         {
-
+            return INSTRUCTION_TYPE::NAMESPACE;
         }
-        else if (_tokens[0] == "struct")
+        else if (have_token(instruction, "class"))
         {
-
+            return INSTRUCTION_TYPE::CLASS;
         }
-        else if (_tokens[0] == "namespace")
+        else if (have_token(instruction, "struct"))
         {
-
+            return INSTRUCTION_TYPE::STRUCT;
+        }
+        else if (have_token(instruction, "typedef"))
+        {
+            return INSTRUCTION_TYPE::TYPEDEF;
         }
         else
         {
-            size_t equals = find_token_pos(_tokens, "=");
-            size_t bracket = find_token_pos(_tokens, "(");
+            size_t equals = find_token_pos(instruction, "=");
+            size_t bracket = find_token_pos(instruction, "(");
 
             if (equals != std::string::npos)
             {
                 // pure function
                 if (bracket != std::string::npos && bracket < equals)
                 {
-                    parse_function(_tokens);
+                    return INSTRUCTION_TYPE::FUNCTION;
                 }
                 // variable
                 else
                 {
-                    parse_variable(_tokens);
+                    return INSTRUCTION_TYPE::VARIABLE;
                 }
             }
             // function
             else if (bracket != std::string::npos)
             {
-                parse_function(_tokens);
+                return INSTRUCTION_TYPE::FUNCTION;
             }
             // variable
             else
             {
-                parse_variable(_tokens);
+                return INSTRUCTION_TYPE::VARIABLE;
             }
+        }
+
+        return INSTRUCTION_TYPE::UNKNOWN;
+    }
+
+    void parse_instruction()
+    {
+        INSTRUCTION_TYPE type = get_instruction_type();
+
+        switch (type)
+        {
+            case INSTRUCTION_TYPE::VARIABLE:
+            {
+                variables.push_back(parse_variable(0, instruction.size() - 1));
+                break;
+            }
+            case INSTRUCTION_TYPE::FUNCTION:
+            {
+                functions.push_back(parse_function(0, instruction.size() - 1));
+                break;
+            }
+            
+            default: break;
         }
     }
 
-    void parse_preprocessor_instruction(const std::vector<std::string>& _tokens)
+    void parse_preprocessor_instruction()
     {
-        if (_tokens[0] == "include")
+        if (instruction[0] == "include")
         {
 
         }
-        else if (_tokens[0] == "define")
+        else if (instruction[0] == "define")
         {
 
         }
-        else if (_tokens[0] == "if")
+        else if (instruction[0] == "if")
         {
 
         }
@@ -144,7 +211,7 @@ class cxxdclp
                 {
                     if (token == "\n") // TODO : keep end line char ?
                     {
-                        parse_preprocessor_instruction(instruction);
+                        parse_preprocessor_instruction();
                         instruction.clear();
                     }
                     else
@@ -166,7 +233,7 @@ class cxxdclp
                         }
 
                         instruction.push_back(token);
-                        parse_instruction(instruction);
+                        parse_instruction();
                         instruction.clear();
                     }
                     else

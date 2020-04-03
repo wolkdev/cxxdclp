@@ -48,4 +48,11 @@ size_t find_token_pos(
     return std::string::npos;
 }
 
+bool have_token(
+    const std::vector<std::string>& _tokens,
+    const std::string& _token)
+{
+    return find_token_pos(_tokens, _token) != std::string::npos;
+}
+
 #endif // !TOOLS__HPP

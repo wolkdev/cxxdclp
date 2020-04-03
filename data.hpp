@@ -4,6 +4,17 @@
 #include <string>
 #include <vector>
 
+enum INSTRUCTION_TYPE
+{
+    UNKNOWN,
+    NAMESPACE,
+    CLASS,
+    STRUCT,
+    TYPEDEF,
+    VARIABLE,
+    FUNCTION
+};
+
 enum PROTECTION
 {
     PUBLIC,
