@@ -8,7 +8,6 @@
 #include "data.hpp"
 
 #include <cstdio>
-#include <iostream>
 #include <vector>
 #include <string>
 
@@ -25,6 +24,7 @@ class cxxdclp
     std::vector<std::string> instruction;
     bool preprocessor = false;
 
+    public:
     std::vector<type> types;
     std::vector<variable> variables;
     std::vector<function> functions;
@@ -65,7 +65,7 @@ class cxxdclp
 
         size_t arg = 0;
 
-        for (size_t i = _start; i < _end - 1; i++)
+        for (size_t i = _start; i <= _end; i++)
         {
             if (!func.name.empty())
             {
@@ -209,10 +209,11 @@ class cxxdclp
 
                 if (preprocessor)
                 {
-                    if (token == "\n") // TODO : keep end line char ?
+                    if (token == "\n")
                     {
                         parse_preprocessor_instruction();
                         instruction.clear();
+                        preprocessor = false;
                     }
                     else
                     {
@@ -236,28 +237,27 @@ class cxxdclp
                         parse_instruction();
                         instruction.clear();
                     }
-                    else
+                    else if (token != "\n")
                     {
                         instruction.push_back(token);
                     }
                 }
-
-                std::cout << token << "\n";
             }
         }
     }
 
     public:
-    static void parse(const char* _startupPath)
+    static cxxdclp parse(const char* _startupPath)
     {
         cxxdclp parser;
         parser.parse_file(_startupPath);
+        return parser;
     }
 };
 
 tokenizer cxxdclp::stokenizer = tokenizer
 (
-    " \t\r\n",                  // Dropped Delimiters
+    " \t\r",                  // Dropped Delimiters
 
     std::vector<std::string>    // Kept Delimiters
     {
@@ -288,6 +288,7 @@ tokenizer cxxdclp::stokenizer = tokenizer
         "[",
         "]",
         "#",
+        "\n"
     }
 );
 
