@@ -6,6 +6,7 @@
 #include "tools.hpp"
 
 #include "data.hpp"
+#include "category.hpp"
 
 #include <cstdio>
 #include <vector>
@@ -15,17 +16,20 @@ class cxxdclp
 {
     private:
     static tokenizer stokenizer;
+    static category s_Protection;
+    static category s_NativeType;
+    static category s_Specifier;
+    static category s_NotSupported;
 
     private:
-
+    
     std::string token;
-
-    std::vector<std::string> context;
-
-    std::vector<std::string> defines;
-
     std::vector<std::string> instruction;
-    bool preprocessor = false;
+
+    std::string name;
+    std::vector<std::string> strs_type;
+    std::vector<std::string> strs_specifiers;
+    std::string str_protection;
 
     public:
     std::vector<type> types;
@@ -118,99 +122,22 @@ class cxxdclp
         return func;
     }
 
-    INSTRUCTION_TYPE get_instruction_type()
+    void parse_instruction_token(const std::string& _token)
     {
-        if (instruction.size() == 0)
+        if (_token == s_Protection)
         {
-            return INSTRUCTION_TYPE::UNKNOWN;
+            str_protection = token;
         }
-        else if (instruction[0] == "namespace")
-        {
-            return INSTRUCTION_TYPE::NAMESPACE;
-        }
-        else if (have_token(instruction, "class"))
-        {
-            return INSTRUCTION_TYPE::CLASS;
-        }
-        else if (have_token(instruction, "struct"))
-        {
-            return INSTRUCTION_TYPE::STRUCT;
-        }
-        else if (have_token(instruction, "typedef"))
-        {
-            return INSTRUCTION_TYPE::TYPEDEF;
-        }
-        else
-        {
-            size_t equals = find_token_pos(instruction, "=");
-            size_t bracket = find_token_pos(instruction, "(");
-
-            if (equals != std::string::npos)
-            {
-                // pure function
-                if (bracket != std::string::npos && bracket < equals)
-                {
-                    return INSTRUCTION_TYPE::FUNCTION;
-                }
-                // variable
-                else
-                {
-                    return INSTRUCTION_TYPE::VARIABLE;
-                }
-            }
-            // function
-            else if (bracket != std::string::npos)
-            {
-                return INSTRUCTION_TYPE::FUNCTION;
-            }
-            // variable
-            else
-            {
-                return INSTRUCTION_TYPE::VARIABLE;
-            }
-        }
-
-        return INSTRUCTION_TYPE::UNKNOWN;
     }
 
     INSTRUCTION_TYPE parse_instruction()
     {
-        INSTRUCTION_TYPE type = get_instruction_type();
-
-        switch (type)
+        for (size_t i = 0; i < instruction.size(); i++)
         {
-            case INSTRUCTION_TYPE::VARIABLE:
-            {
-                variables.push_back(parse_variable(0, instruction.size() - 1));
-                break;
-            }
-            case INSTRUCTION_TYPE::FUNCTION:
-            {
-                functions.push_back(parse_function(0, instruction.size() - 1));
-                break;
-            }
-            
-            default: break;
+            parse_instruction_token(instruction[i]);
         }
-
-        return type;
-    }
-
-    void parse_preprocessor_instruction()
-    {
-        if (instruction[0] == "include")
-        {
-
-        }
-        else if (instruction[0] == "define")
-        {
-
-        }
-        else if (instruction[0] == "if")
-        {
-
-        }
-        // ...
+        
+        return INSTRUCTION_TYPE::UNKNOWN;
     }
 
     void get_nex_instruction()
@@ -290,7 +217,7 @@ class cxxdclp
 
 tokenizer cxxdclp::stokenizer = tokenizer
 (
-    " \t\r",                  // Dropped Delimiters
+    " \t\r",                    // Dropped Delimiters
 
     std::vector<std::string>    // Kept Delimiters
     {
@@ -322,6 +249,50 @@ tokenizer cxxdclp::stokenizer = tokenizer
         "]",
         "#",
         "\n"
+    }
+);
+
+category cxxdclp::s_Protection = category
+(
+    std::vector<std::string>
+    {
+        "public",
+        "private",
+        "protected"
+    }
+);
+
+category cxxdclp::s_NativeType = category
+(
+    std::vector<std::string>
+    {
+        "void",
+        "char",
+        "short",
+        "int",
+        "long",
+        "float",
+        "double",
+        "unsigned"
+    }
+);
+
+category cxxdclp::s_Specifier = category
+(
+    std::vector<std::string>
+    {
+        "static",
+        "inline",
+        "virtual",
+        "extern"
+    }
+);
+
+category cxxdclp::s_NotSupported = category
+(
+    std::vector<std::string>
+    {
+        "template"
     }
 );
 

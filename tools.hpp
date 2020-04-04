@@ -76,6 +76,8 @@ std::string get_string(const char* _str)
 
         i++;
     }
+
+    return str;
 }
 
 size_t find_token_pos(
