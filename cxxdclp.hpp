@@ -15,7 +15,7 @@ class cxxdclp
 {
     private:
     static tokenizer stokenizer;
-    
+
     private:
     std::vector<std::string> context;
 
@@ -34,20 +34,40 @@ class cxxdclp
     {
         variable var;
 
+        bool value = false;
+
         for (size_t i = _start; i <= _end; i++)
         {
-            if (!var.name.empty())
+            if (value)
             {
                 var.value.push_back(instruction[i]);
             }
             else
             {
-                const std::string& next = instruction[i + 1];
-
-                if (next == "=" || next == ";" || next == "," || next == ")")
+                if (instruction[i] == "="
+                    || instruction[i] == ";"
+                    || instruction[i] == ","
+                    || instruction[i] == ")"
+                    || instruction[i] == "[")
                 {
-                    var.name = instruction[i];
-                    i++; // skip "=" or ";" or "," or ")"
+                    if (var.name.empty())
+                    {
+                        var.name = var.type.back();
+                        var.type.pop_back();
+                    }
+
+                    if (instruction[i] == "=")
+                    {
+                        value = true;
+                    }
+                    else if (instruction[i] == "[")
+                    {
+                        var.type.push_back(instruction[i]);
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
                 else
                 {
@@ -97,9 +117,7 @@ class cxxdclp
 
     INSTRUCTION_TYPE get_instruction_type()
     {
-        size_t size = instruction.size();
-
-        if (size == 0)
+        if (instruction.size() == 0)
         {
             return INSTRUCTION_TYPE::UNKNOWN;
         }
@@ -152,7 +170,7 @@ class cxxdclp
         return INSTRUCTION_TYPE::UNKNOWN;
     }
 
-    void parse_instruction()
+    INSTRUCTION_TYPE parse_instruction()
     {
         INSTRUCTION_TYPE type = get_instruction_type();
 
@@ -171,6 +189,8 @@ class cxxdclp
             
             default: break;
         }
+
+        return type;
     }
 
     void parse_preprocessor_instruction()
@@ -193,6 +213,8 @@ class cxxdclp
     void parse_file(const char* _filePath)
     {
         char* content = file_read_all_text(_filePath);
+
+        INSTRUCTION_TYPE type;
 
         if (content != nullptr)
         {
@@ -228,14 +250,14 @@ class cxxdclp
                     }
                     else if (token == ";" || token == "{")
                     {
-                        if (token == "{")
+                        instruction.push_back(token);
+                        type = parse_instruction();
+                        instruction.clear();
+
+                        if (type == INSTRUCTION_TYPE::FUNCTION && token == "{")
                         {
                             skip_until(stokenizer, "}");
                         }
-
-                        instruction.push_back(token);
-                        parse_instruction();
-                        instruction.clear();
                     }
                     else if (token != "\n")
                     {
