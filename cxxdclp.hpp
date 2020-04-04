@@ -17,6 +17,9 @@ class cxxdclp
     static tokenizer stokenizer;
 
     private:
+
+    std::string token;
+
     std::vector<std::string> context;
 
     std::vector<std::string> defines;
@@ -210,6 +213,48 @@ class cxxdclp
         // ...
     }
 
+    void get_nex_instruction()
+    {
+        bool preprocessor = false;
+
+        instruction.clear();
+
+        while (!stokenizer.finished() &&
+              (preprocessor ?
+              (token != "\n") :
+              (token != ";" && token != "}")))
+        {
+            token = stokenizer.next();
+
+            if (token == "#")
+            {
+                preprocessor = true;
+            }
+
+            if (token == "//")
+            {
+                skip_until(stokenizer, "\n");
+            }
+            else if (token == "/*")
+            {
+                skip_until(stokenizer, "*/");
+            }
+            else
+            {
+                if (token != "\n")
+                {
+                    instruction.push_back(token);
+                }
+
+                if (token == "\"")
+                {
+                    instruction.push_back(get_string(stokenizer.text - 1));
+                    stokenizer.text += instruction.back().size();
+                }
+            }
+        }
+    }
+
     void parse_file(const char* _filePath)
     {
         char* content = file_read_all_text(_filePath);
@@ -222,47 +267,13 @@ class cxxdclp
 
             while (!stokenizer.finished())
             {
-                const std::string& token = stokenizer.next();
+                get_nex_instruction();
+                type = parse_instruction();
 
-                if (token == "\"")
+                if (type == INSTRUCTION_TYPE::FUNCTION
+                    && instruction.back() == "{")
                 {
-                    // TODO : Get 'raw' string
-                }
-
-                if (preprocessor)
-                {
-                    if (token == "\n")
-                    {
-                        parse_preprocessor_instruction();
-                        instruction.clear();
-                        preprocessor = false;
-                    }
-                    else
-                    {
-                        instruction.push_back(token);
-                    }
-                }
-                else
-                {
-                    if (token == "#")
-                    {
-                        preprocessor = true;
-                    }
-                    else if (token == ";" || token == "{")
-                    {
-                        instruction.push_back(token);
-                        type = parse_instruction();
-                        instruction.clear();
-
-                        if (type == INSTRUCTION_TYPE::FUNCTION && token == "{")
-                        {
-                            skip_until(stokenizer, "}");
-                        }
-                    }
-                    else if (token != "\n")
-                    {
-                        instruction.push_back(token);
-                    }
+                    skip_until(stokenizer, "}");
                 }
             }
         }

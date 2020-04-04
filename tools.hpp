@@ -33,6 +33,51 @@ void skip_until(tokenizer& _tokenizer, const std::string& _str)
     while (!_tokenizer.finished() && _tokenizer.next() != _str) { }
 }
 
+char get_special_char(char _char)
+{
+    switch (_char)
+    {
+        case 'n': return '\n';
+        case 'r': return '\r';
+        case 't': return '\t';
+        case '0': return '\0';
+        default: return _char;
+    }
+}
+
+std::string get_string(const char* _str)
+{
+    int i = 1;
+    bool special;
+    std::string str;
+
+    if (_str[0] != '\"' || _str[0] == '\0')
+    {
+        return "";
+    }
+
+    while (_str[i] != '\0' && (special || _str[i] != '\"'))
+    {
+        if (!special && _str[i] == '\\')
+        {
+            special = true;
+        }
+        else
+        {
+            if (special)
+            {
+                str += get_special_char(_str[i]);
+            }
+            else
+            {
+                str += _str[i];
+            }
+        }
+
+        i++;
+    }
+}
+
 size_t find_token_pos(
     const std::vector<std::string>& _tokens,
     const std::string& _token, size_t _start = 0)
