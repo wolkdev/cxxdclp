@@ -45,6 +45,21 @@ struct function : common
     bool isVirtual;
 };
 
+struct member
+{
+    std::string name;
+    std::string typeName;
+    std::string value;
+    std::vector<member> args;
+
+    std::vector<int> arraySizes;
+
+    bool isConst = false;
+    bool isFunction = false;
+    bool isFunctionPtr = false;
+    bool isPure = false;
+};
+
 struct type
 {
     std::string name;

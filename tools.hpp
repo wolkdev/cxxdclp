@@ -102,4 +102,17 @@ bool have_token(
     return find_token_pos(_tokens, _token) != std::string::npos;
 }
 
+bool is_digit(const std::string& _str)
+{
+    for (size_t i = 0; i < _str.size(); i++)
+    {
+        if (_str[i] < 48 || _str[i] > 57)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 #endif // !TOOLS__HPP

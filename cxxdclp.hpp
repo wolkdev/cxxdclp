@@ -16,20 +16,26 @@ class cxxdclp
 {
     private:
     static tokenizer stokenizer;
-    static category s_Protection;
-    static category s_NativeType;
-    static category s_Specifier;
-    static category s_NotSupported;
 
     private:
     
     std::string token;
     std::vector<std::string> instruction;
 
+    int index;
+
     std::string name;
     std::vector<std::string> strs_type;
     std::vector<std::string> strs_specifiers;
-    std::string str_protection;
+    PROTECTION protection;
+    bool typelink;
+
+    bool isStatic;
+    bool isVirtual;
+    bool isInline;
+    bool isExtern;
+
+    bool forwardDcl;
 
     public:
     std::vector<type> types;
@@ -37,104 +43,205 @@ class cxxdclp
     std::vector<function> functions;
 
     private:
-    variable parse_variable(size_t _start, size_t _end)
+
+    bool try_parse_template()
     {
-        variable var;
-
-        bool value = false;
-
-        for (size_t i = _start; i <= _end; i++)
+        if (instruction[index] == "template")
         {
-            if (value)
-            {
-                var.value.push_back(instruction[i]);
-            }
-            else
-            {
-                if (instruction[i] == "="
-                    || instruction[i] == ";"
-                    || instruction[i] == ","
-                    || instruction[i] == ")"
-                    || instruction[i] == "[")
-                {
-                    if (var.name.empty())
-                    {
-                        var.name = var.type.back();
-                        var.type.pop_back();
-                    }
 
-                    if (instruction[i] == "=")
-                    {
-                        value = true;
-                    }
-                    else if (instruction[i] == "[")
-                    {
-                        var.type.push_back(instruction[i]);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    var.type.push_back(instruction[i]);
-                }
-            }
         }
-
-        return var;
+        else
+        {
+            return false;
+        }
+        
+        return true;
     }
 
-    function parse_function(size_t _start, size_t _end)
+    bool try_parse_type()
     {
-        function func;
-
-        size_t arg = 0;
-
-        for (size_t i = _start; i <= _end; i++)
+        if (instruction[index] == "class")
         {
-            if (!func.name.empty())
-            {
-                if (instruction[i] == "," || instruction[i] == ")" && arg < i)
-                {
-                    func.args.push_back(parse_variable(arg, i));
-                    arg = i + 1;
-                }
-            }
-            else
-            {
-                const std::string& next = instruction[i + 1];
 
-                if (next == "(")
-                {
-                    func.name = instruction[i];
-                    i++; // skip "("
-                    arg = i + 1;
-                }
-                else
-                {
-                    func.type.push_back(instruction[i]);
-                }
-            }
+        }
+        else if (instruction[index] == "struct")
+        {
+
+        }
+        else if (instruction[index] == "typedef")
+        {
+            
+        }
+        else
+        {
+            return false;
         }
 
-        return func;
+        if (instruction[index + 1] == ";")
+        {
+            forwardDcl = true;
+        }
+
+        return true;
     }
 
-    void parse_instruction_token(const std::string& _token)
+    bool try_parse_protection()
     {
-        if (_token == s_Protection)
+        if (instruction[index] == "public"
+            && instruction[index + 1] == ":")
         {
-            str_protection = token;
+            protection = PROTECTION::PUBLIC;
         }
+        else if (instruction[index] == "private"
+            && instruction[index + 1] == ":")
+        {
+            protection = PROTECTION::PRIVATE;
+        }
+        else if (instruction[index] == "protected"
+            && instruction[index + 1] == ":")
+        {
+            protection = PROTECTION::PROTECTED;
+        }
+        else
+        {
+            return false;
+        }
+
+        index += 2;
+
+        return true;
+    }
+
+    bool try_parse_specifier()
+    {
+        if (instruction[index] == "static")
+        {
+            isStatic = true;
+        }
+        else if (instruction[index] == "virtual")
+        {
+            isVirtual = true;
+        }
+        else if (instruction[index] == "inline")
+        {
+            isInline = true;
+        }
+        else if (instruction[index] == "extern")
+        {
+            isExtern = true;
+        }
+        else
+        {
+            return false;
+        }
+        
+        return true;
+    }
+
+    bool try_parse_array(int& _arraySize)
+    {
+        if (instruction[index] == "[")
+        {
+            if (is_digit(instruction[++index]))
+            {
+                _arraySize = std::stoi(instruction[index]);
+            }
+        }
+        else
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool try_parse_value(std::string& _value)
+    {
+        if (instruction[index] == "=")
+        {
+            while (instruction[++index] != ";")
+            {
+                _value += instruction[index];
+            }
+        }
+        else
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool is_pointer()
+    {
+        return instruction[index] == "*";
+    }
+
+    bool is_reference()
+    {
+        return instruction[index] == "&";
+    }
+
+    bool is_move_reference()
+    {
+        return instruction[index] == "&&";
+    }
+
+    bool is_const()
+    {
+        return instruction[index] == "const";
+    }
+
+    bool is_type_extension()
+    {
+        return instruction[index] == "unsigned"
+            || instruction[index] == "long"
+            || instruction[index] == "short";
+    }
+
+    void parse_member(member& _member)
+    {
+        int arraySize;
+        
+        while (instruction[index] != ";")
+        {
+            if (is_const())
+            {
+                _member.isConst;
+            }
+            else if (try_parse_array(arraySize))
+            {
+                _member.arraySizes.push_back(arraySize);
+            }
+            else if (is_type_extension())
+            {
+                _member.typeName += instruction[index];
+            }
+            else if (try_parse_value(_member.value))
+            {
+
+            }
+        }
+    }
+
+    void parse_instruction_token()
+    {
+        if (try_parse_template())
+        {
+
+        }
+        else if (try_parse_type())
+        {
+            
+        }
+        // ...
     }
 
     INSTRUCTION_TYPE parse_instruction()
     {
-        for (size_t i = 0; i < instruction.size(); i++)
+        for (index = 0; index < instruction.size(); index++)
         {
-            parse_instruction_token(instruction[i]);
+            parse_instruction_token();
         }
         
         return INSTRUCTION_TYPE::UNKNOWN;
@@ -249,50 +356,6 @@ tokenizer cxxdclp::stokenizer = tokenizer
         "]",
         "#",
         "\n"
-    }
-);
-
-category cxxdclp::s_Protection = category
-(
-    std::vector<std::string>
-    {
-        "public",
-        "private",
-        "protected"
-    }
-);
-
-category cxxdclp::s_NativeType = category
-(
-    std::vector<std::string>
-    {
-        "void",
-        "char",
-        "short",
-        "int",
-        "long",
-        "float",
-        "double",
-        "unsigned"
-    }
-);
-
-category cxxdclp::s_Specifier = category
-(
-    std::vector<std::string>
-    {
-        "static",
-        "inline",
-        "virtual",
-        "extern"
-    }
-);
-
-category cxxdclp::s_NotSupported = category
-(
-    std::vector<std::string>
-    {
-        "template"
     }
 );
 
