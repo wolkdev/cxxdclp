@@ -54,7 +54,12 @@ struct member
 
     std::vector<int> arraySizes;
 
+    bool isPtr = false;
+    bool isRef = false;
+    bool isMoveRef = false;
+
     bool isConst = false;
+    bool isConstRefOrPtr = false;
     bool isFunction = false;
     bool isFunctionPtr = false;
     bool isPure = false;
@@ -67,8 +72,11 @@ struct type
     
     PROTECTION protection;
 
-    bool isStruct;
-    bool isTemplate;
+    bool isClass = false;
+    bool isStruct = false;
+    bool isTemplate = false;
+
+    bool forwardDcl = false;
 
     std::vector<std::string> templates;
 

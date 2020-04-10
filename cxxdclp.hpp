@@ -6,7 +6,6 @@
 #include "tools.hpp"
 
 #include "data.hpp"
-#include "category.hpp"
 
 #include <cstdio>
 #include <vector>
@@ -30,6 +29,9 @@ class cxxdclp
     PROTECTION protection;
     bool typelink;
 
+    type ptype;
+    member pmember;
+
     bool isStatic;
     bool isVirtual;
     bool isInline;
@@ -41,8 +43,45 @@ class cxxdclp
     std::vector<type> types;
     std::vector<variable> variables;
     std::vector<function> functions;
+    std::vector<member> members;
 
     private:
+
+    bool is_pointer()
+    {
+        return instruction[index] == "*";
+    }
+
+    bool is_reference()
+    {
+        return instruction[index] == "&";
+    }
+
+    bool is_move_reference()
+    {
+        return instruction[index] == "&&";
+    }
+
+    bool is_const()
+    {
+        return instruction[index] == "const";
+    }
+
+    bool is_type_link()
+    {
+        return instruction[index] == "::";
+    }
+
+    bool is_native_type()
+    {
+        return instruction[index] == "char"
+            || instruction[index] == "int"
+            || instruction[index] == "float"
+            || instruction[index] == "unsigned"
+            || instruction[index] == "short"
+            || instruction[index] == "double"
+            || instruction[index] == "long";
+    }
 
     bool try_parse_template()
     {
@@ -58,47 +97,20 @@ class cxxdclp
         return true;
     }
 
-    bool try_parse_type()
-    {
-        if (instruction[index] == "class")
-        {
-
-        }
-        else if (instruction[index] == "struct")
-        {
-
-        }
-        else if (instruction[index] == "typedef")
-        {
-            
-        }
-        else
-        {
-            return false;
-        }
-
-        if (instruction[index + 1] == ";")
-        {
-            forwardDcl = true;
-        }
-
-        return true;
-    }
-
     bool try_parse_protection()
     {
         if (instruction[index] == "public"
-            && instruction[index + 1] == ":")
+            && instruction[++index] == ":")
         {
             protection = PROTECTION::PUBLIC;
         }
         else if (instruction[index] == "private"
-            && instruction[index + 1] == ":")
+            && instruction[++index] == ":")
         {
             protection = PROTECTION::PRIVATE;
         }
         else if (instruction[index] == "protected"
-            && instruction[index + 1] == ":")
+            && instruction[++index] == ":")
         {
             protection = PROTECTION::PROTECTED;
         }
@@ -106,8 +118,6 @@ class cxxdclp
         {
             return false;
         }
-
-        index += 2;
 
         return true;
     }
@@ -140,12 +150,11 @@ class cxxdclp
 
     bool try_parse_array(int& _arraySize)
     {
-        if (instruction[index] == "[")
+        if (instruction[index] == "["
+            && is_digit(instruction[++index])
+            && instruction[++index] == "]")
         {
-            if (is_digit(instruction[++index]))
-            {
-                _arraySize = std::stoi(instruction[index]);
-            }
+            _arraySize = std::stoi(instruction[index - 1]);
         }
         else
         {
@@ -163,6 +172,8 @@ class cxxdclp
             {
                 _value += instruction[index];
             }
+
+            index--;
         }
         else
         {
@@ -172,55 +183,98 @@ class cxxdclp
         return true;
     }
 
-    bool is_pointer()
+    bool try_parse_type(type& _type)
     {
-        return instruction[index] == "*";
-    }
+        if (instruction[index] == "class")
+        {
+            _type.isClass = true;
+            _type.name = instruction[++index];
+        }
+        else if (instruction[index] == "struct")
+        {
+            _type.isStruct = true;
+            _type.name = instruction[++index];
+        }
+        else if (instruction[index] == "typedef")
+        {
 
-    bool is_reference()
-    {
-        return instruction[index] == "&";
-    }
+        }
+        else
+        {
+            return false;
+        }
 
-    bool is_move_reference()
-    {
-        return instruction[index] == "&&";
-    }
+        if (instruction[instruction.size() - 1] == ";")
+        {
+            _type.forwardDcl = true;
+        }
 
-    bool is_const()
-    {
-        return instruction[index] == "const";
-    }
-
-    bool is_type_extension()
-    {
-        return instruction[index] == "unsigned"
-            || instruction[index] == "long"
-            || instruction[index] == "short";
+        return true;
     }
 
     void parse_member(member& _member)
     {
         int arraySize;
-        
+        bool typeNameLink = false;
+
         while (instruction[index] != ";")
         {
             if (is_const())
             {
-                _member.isConst;
+                if (_member.name.empty())
+                {
+                    _member.isConst = true;
+                    _member.isConstRefOrPtr = true;
+                }
+                else
+                {
+                    _member.isConstRefOrPtr = true;
+                }
+            }
+            else if (is_native_type())
+            {
+                if (!_member.typeName.empty())
+                {
+                    _member.typeName += " "; // Space
+                }
+
+                _member.typeName += instruction[index];
+            }
+            else if (is_type_link())
+            {
+                _member.typeName += instruction[index];
+                typeNameLink = true;
+            }
+            else if (is_pointer())
+            {
+                _member.isPtr = true;
+            }
+            else if (is_reference())
+            {
+                _member.isRef = true;
+            }
+            else if (is_move_reference())
+            {
+                _member.isMoveRef = true;
             }
             else if (try_parse_array(arraySize))
             {
                 _member.arraySizes.push_back(arraySize);
             }
-            else if (is_type_extension())
+
+            else if (try_parse_value(_member.value));
+
+            else if (typeNameLink || _member.typeName.empty())
             {
                 _member.typeName += instruction[index];
+                typeNameLink = false;
             }
-            else if (try_parse_value(_member.value))
+            else
             {
-
+                _member.name = instruction[index];
             }
+
+            index++;
         }
     }
 
@@ -230,9 +284,18 @@ class cxxdclp
         {
 
         }
-        else if (try_parse_type())
+        else if (try_parse_specifier())
         {
-            
+
+        }
+        else if (try_parse_type(ptype))
+        {
+            types.push_back(ptype);
+        }
+        else
+        {
+            parse_member(pmember);
+            members.push_back(std::move(pmember));
         }
         // ...
     }
@@ -252,6 +315,7 @@ class cxxdclp
         bool preprocessor = false;
 
         instruction.clear();
+        token.clear();
 
         while (!stokenizer.finished() &&
               (preprocessor ?
