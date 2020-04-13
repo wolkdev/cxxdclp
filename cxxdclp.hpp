@@ -72,6 +72,21 @@ class cxxdclp
         return instruction[index] == "::";
     }
 
+    bool is_function_begin()
+    {
+        return instruction[index] == "(";
+    }
+
+    bool is_function_end()
+    {
+        return instruction[index] == ")";
+    }
+
+    bool is_comma()
+    {
+        return instruction[index] == ",";
+    }
+
     bool is_native_type()
     {
         return instruction[index] == "char"
@@ -168,8 +183,23 @@ class cxxdclp
     {
         if (instruction[index] == "=")
         {
-            while (instruction[++index] != ";")
+            int bracket = 0;
+
+            while (++index < instruction.size()
+                && instruction[index] != ";"
+                &&
+                (bracket
+                || (instruction[index] != "," && instruction[index] != ")")))
             {
+                if (instruction[index] == "(")
+                {
+                    bracket++;
+                }
+                else if (instruction[index] == ")")
+                {
+                    bracket--;
+                }
+
                 _value += instruction[index];
             }
 
@@ -217,7 +247,9 @@ class cxxdclp
         int arraySize;
         bool typeNameLink = false;
 
-        while (instruction[index] != ";")
+        while (instruction[index] != ";"
+            && instruction[index] != ","
+            && instruction[index] != "{")
         {
             if (is_const())
             {
@@ -256,6 +288,35 @@ class cxxdclp
             else if (is_move_reference())
             {
                 _member.isMoveRef = true;
+            }
+            else if (is_function_begin())
+            {
+                if (_member.name.empty())
+                {
+                    _member.isFunctionPtr = true;
+                }
+                else
+                {
+                    _member.isFunction = !_member.isFunctionPtr;
+
+                    if (instruction[++index] != ")")
+                    {
+                        do
+                        {
+                            _member.args.push_back(member());
+                            parse_member(_member.args.back());
+
+                        } while (instruction[index] == ","
+                            && ++index < instruction.size());
+                    }
+                }
+            }
+            else if (is_function_end())
+            {
+                if (!_member.isFunctionPtr && !_member.isFunction)
+                {
+                    break;
+                }
             }
             else if (try_parse_array(arraySize))
             {
