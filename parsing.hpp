@@ -183,7 +183,7 @@ void parse_member(token_stream& _i, member& _member)
     {
         if (_i.get() == ")")
         {
-            if (!_member.isFunctionPtr && !_member.isFunction)
+            if (!_member.type.isFunctionPtr && !_member.isFunction)
             {
                 break;
             }
@@ -192,11 +192,11 @@ void parse_member(token_stream& _i, member& _member)
         {
             if (_member.name.empty())
             {
-                _member.isFunctionPtr = true;
+                _member.type.isFunctionPtr = true;
             }
             else
             {
-                _member.isFunction = !_member.isFunctionPtr;
+                _member.isFunction = !_member.type.isFunctionPtr;
 
                 if (_i.next() != ")")
                 {
@@ -211,32 +211,25 @@ void parse_member(token_stream& _i, member& _member)
         }
         else if (_i.get() == "const")
         {
-            if (_member.name.empty())
-            {
-                _member.isConst = true;
-                _member.isConstRefOrPtr = true;
-            }
-            else
-            {
-                _member.isConstRefOrPtr = true;
-            }
+            _member.type.isConst = true;
         }
         else if (_i.get() == "::")
         {
-            _member.typeName += _i.get();
+            _member.type.name += _i.get();
             typeNameLink = true;
         }
         else if (_i.get() == "*")
         {
-            _member.isPtr = true;
+            _member.type.isPtr = true;
+            _member.type.ptrDepth++;
         }
         else if (_i.get() == "&")
         {
-            _member.isRef = true;
+            _member.type.isRef = true;
         }
         else if (_i.get() == "&&")
         {
-            _member.isMoveRef = true;
+            _member.type.isMoveRef = true;
         }
         else if (try_parse_array(_i, arraySize))
         {
@@ -246,13 +239,13 @@ void parse_member(token_stream& _i, member& _member)
         {
             // do nothing else
         }
-        else if (try_parse_native_type(_i, _member.typeName))
+        else if (try_parse_native_type(_i, _member.type.name))
         {
             // do nothing else
         }
-        else if (typeNameLink || _member.typeName.empty())
+        else if (typeNameLink || _member.type.name.empty())
         {
-            _member.typeName += _i.get();
+            _member.type.name += _i.get();
             typeNameLink = false;
         }
         else

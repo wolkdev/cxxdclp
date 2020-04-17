@@ -16,6 +16,7 @@
 class cxxdclp
 {
     private:
+
     static tokenizer stokenizer;
 
     private:
@@ -39,12 +40,62 @@ class cxxdclp
     bool forwardDcl;
 
     public:
+
     std::vector<type> types;
     std::vector<variable> variables;
     std::vector<function> functions;
-    std::vector<member> members;
 
     private:
+
+    void flush_instruction()
+    {
+        // TODO
+    }
+
+    void apply_instruction()
+    {
+        if (instructionType == INSTRUCTION_TYPE::NAMESPACE)
+        {
+
+        }
+        else if (instructionType == INSTRUCTION_TYPE::CLASS
+            || instructionType == INSTRUCTION_TYPE::STRUCT)
+        {
+            types.push_back(ptype);
+        }
+        else if (instructionType == INSTRUCTION_TYPE::VARIABLE)
+        {
+            variable var;
+            var.name = pmember.name;
+            var.value = pmember.value;
+            var.type = pmember.type;
+            var.protection = protection;
+            var.isStatic = isStatic;
+
+            variables.push_back(var);
+        }
+        else if (instructionType == INSTRUCTION_TYPE::FUNCTION)
+        {
+            function func;
+            func.name = pmember.name;
+            func.isPure = pmember.value == "0";
+            func.type = pmember.type;
+            func.protection = protection;
+            func.isStatic = isStatic;
+            
+            for (size_t i = 0; i < pmember.args.size(); i++)
+            {
+                variable arg;
+                arg.name = pmember.args[i].name;
+                arg.value = pmember.args[i].value;
+                arg.type = pmember.args[i].type;
+
+                func.args.push_back(arg);
+            }
+
+            functions.push_back(func);
+        }
+    }
 
     void parse_instruction_token()
     {
@@ -78,14 +129,10 @@ class cxxdclp
         }
         else if (try_parse_typedef(instruction, ptype))
         {
-            types.push_back(ptype);
-
             instructionType = INSTRUCTION_TYPE::TYPEDEF;
         }
         else if (try_parse_type(instruction, ptype))
         {
-            types.push_back(ptype);
-
             instructionType = ptype.isClass ?
                 INSTRUCTION_TYPE::CLASS :
                 INSTRUCTION_TYPE::STRUCT;
@@ -93,7 +140,6 @@ class cxxdclp
         else
         {
             parse_member(instruction, pmember);
-            members.push_back(std::move(pmember));
             
             instructionType = pmember.isFunction ?
                 INSTRUCTION_TYPE::FUNCTION :

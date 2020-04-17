@@ -22,10 +22,33 @@ enum PROTECTION
     PROTECTED
 };
 
+struct type_definition
+{
+
+};
+
+struct type_instance
+{
+    std::string name;
+    std::string fullName;
+
+    bool isConst = false;
+
+    bool isPtr = false;
+    bool isRef = false;
+    bool isMoveRef = false;
+
+    int ptrDepth = 0;
+
+    bool isFunctionPtr = false;
+
+    std::vector<int> arraySizes;
+};
+
 struct common
 {
     std::string name;
-    std::vector<std::string> type;
+    type_instance type;
 
     PROTECTION protection;
     
@@ -34,7 +57,7 @@ struct common
 
 struct variable : common
 {
-    std::vector<std::string> value;
+    std::string value;
 };
 
 struct function : common
@@ -48,20 +71,13 @@ struct function : common
 struct member
 {
     std::string name;
-    std::string typeName;
+    type_instance type;
     std::string value;
     std::vector<member> args;
 
     std::vector<int> arraySizes;
 
-    bool isPtr = false;
-    bool isRef = false;
-    bool isMoveRef = false;
-
-    bool isConst = false;
-    bool isConstRefOrPtr = false;
     bool isFunction = false;
-    bool isFunctionPtr = false;
     bool isPure = false;
 };
 
