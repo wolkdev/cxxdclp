@@ -20,7 +20,10 @@ char* file_read_all_text(const char* _filePath)
         char* content = new char[size];
 
         rewind(file);
+
         fread(content, sizeof(char), size, file);
+
+        fclose(file);
 
         return content;
     }

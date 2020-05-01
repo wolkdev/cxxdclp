@@ -12,7 +12,8 @@ enum INSTRUCTION_TYPE
     STRUCT,
     TYPEDEF,
     VARIABLE,
-    FUNCTION
+    FUNCTION,
+    CONTEXT_END
 };
 
 enum PROTECTION
@@ -30,7 +31,7 @@ struct type_definition
 struct type_instance
 {
     std::string name;
-    std::string fullName;
+    std::vector<std::string> fullName;
 
     bool isConst = false;
 
@@ -48,6 +49,8 @@ struct type_instance
 struct common
 {
     std::string name;
+    std::vector<std::string> fullName;
+    
     type_instance type;
 
     PROTECTION protection;

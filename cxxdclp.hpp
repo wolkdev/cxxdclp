@@ -20,6 +20,8 @@ class cxxdclp
     static tokenizer stokenizer;
 
     private:
+
+    std::vector<std::string> context;
     
     std::string token;
     token_stream instruction;
@@ -37,8 +39,6 @@ class cxxdclp
     bool isInline;
     bool isExtern;
 
-    bool forwardDcl;
-
     public:
 
     std::vector<type> types;
@@ -49,19 +49,47 @@ class cxxdclp
 
     void flush_instruction()
     {
-        // TODO
+        pnamespace.clear();
+        ptype = type();
+        pmember = member();
+
+        isStatic = false;
+        isVirtual = false;
+        isInline = false;
+        isExtern = false;
     }
 
     void apply_instruction()
     {
-        if (instructionType == INSTRUCTION_TYPE::NAMESPACE)
+        if (instructionType == INSTRUCTION_TYPE::CONTEXT_END)
         {
-
+            context.pop_back();
+        }
+        else if (instructionType == INSTRUCTION_TYPE::NAMESPACE)
+        {
+            context.push_back(pnamespace);
         }
         else if (instructionType == INSTRUCTION_TYPE::CLASS
             || instructionType == INSTRUCTION_TYPE::STRUCT)
         {
+            ptype.fullName = context;
+            ptype.fullName.push_back(ptype.name);
+
             types.push_back(ptype);
+
+            if (!ptype.forwardDcl)
+            {
+                context.push_back(ptype.name);
+
+                if (instructionType == INSTRUCTION_TYPE::CLASS)
+                {
+                    protection = PROTECTION::PRIVATE;
+                }
+                else if (instructionType == INSTRUCTION_TYPE::STRUCT)
+                {
+                    protection = PROTECTION::PUBLIC;
+                }
+            }
         }
         else if (instructionType == INSTRUCTION_TYPE::VARIABLE)
         {
@@ -71,6 +99,9 @@ class cxxdclp
             var.type = pmember.type;
             var.protection = protection;
             var.isStatic = isStatic;
+
+            var.fullName = context;
+            var.fullName.push_back(var.name);
 
             variables.push_back(var);
         }
@@ -82,7 +113,10 @@ class cxxdclp
             func.type = pmember.type;
             func.protection = protection;
             func.isStatic = isStatic;
-            
+
+            func.fullName = context;
+            func.fullName.push_back(func.name);
+
             for (size_t i = 0; i < pmember.args.size(); i++)
             {
                 variable arg;
@@ -99,7 +133,11 @@ class cxxdclp
 
     void parse_instruction_token()
     {
-        if (instruction.get() == "static")
+        if (instruction.get() == "}")
+        {
+            instructionType = INSTRUCTION_TYPE::CONTEXT_END;
+        }
+        else if (instruction.get() == "static")
         {
             isStatic = true;
         }
@@ -209,8 +247,10 @@ class cxxdclp
 
             while (!stokenizer.finished())
             {
+                flush_instruction();
                 get_nex_instruction();
                 parse_instruction();
+                apply_instruction();
 
                 if (instructionType == INSTRUCTION_TYPE::FUNCTION
                     && instruction.back() == "{")
